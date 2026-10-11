@@ -29,20 +29,7 @@ def exporter(dossier_sortie_base, dossier, plan, article, statut, valide, histor
         json.dumps({"statut": statut, "verification_humaine_requise": True, "historique": historique}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    # Echappement du HTML brut genere par le modele avant conversion Markdown.
-    body = markdown.markdown(html.escape(final_md, quote=False), extensions=["fenced_code", "tables"])
-    document = (
-        "<!doctype html><html lang='fr'><meta charset='utf-8'>"
-        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        "<title>Article et sources</title><style>body{font:18px/1.7 system-ui;"
-        "max-width:850px;margin:40px auto;padding:0 24px}a{color:#155cb7}"
-        "pre{overflow:auto;background:#eef3fa;padding:18px}</style>"
-        f"<p><strong>{statut}</strong> - Verification humaine requise.</p>"
-        + body
-        + "<section><h2>Suggestions de recherche Google</h2>"
-        + dossier["suggestions_html"]
-        + "</section></html>"
-    )
+    document = construire_html(final_md, dossier, statut, valide, refs)
     (sortie / f"{nom}.html").write_text(document, encoding="utf-8")
     archive = sortie.with_suffix(".zip")
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
