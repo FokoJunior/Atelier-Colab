@@ -25,6 +25,7 @@ from pathlib import Path
 from google import genai
 
 from atelier.config import charger_cle_api
+from atelier.console import afficher_requetes, afficher_sources, resume_final, titre
 from atelier.export import exporter
 from atelier.pipeline import construire_agents, planifier_rediger_corriger
 from atelier.recherche import rechercher
@@ -36,26 +37,27 @@ async def executer(args):
         versions_installees = {p: version(p) for p in ["google-adk", "google-genai", "Markdown"]}
     except Exception:
         versions_installees = {}
-    print("Configuration prete. Modele :", args.modele)
-    print(versions_installees)
+
+    titre("Configuration")
+    print(f"  Modele : {args.modele}")
+    print("  Versions : " + ", ".join(f"{p} {v}" for p, v in versions_installees.items()))
 
     client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
     date = datetime.now(timezone.utc).date().isoformat()
 
-    print("\n--- Etape 3 : recherche reelle ---")
+    titre("Etape 3 : recherche reelle")
     dossier = rechercher(client, args.sujet, args.public, args.angle, args.modele, date)
-    print("Requetes reellement renvoyees :", dossier["requetes"])
-    print("Sources etayees :", len(dossier["sources"]))
-    for source in dossier["sources"]:
-        print(source["id"], source["titre"], source["url"])
+    afficher_requetes(dossier["requetes"])
+    print()
+    afficher_sources(dossier["sources"])
 
-    print("\n--- Etape 4-5 : agents, redaction et correction ---")
+    titre("Etape 4-5 : agents, redaction et correction")
     planificateur, redacteur, relecteur = construire_agents(args.modele)
     plan, article, statut, valide, corrections, historique = await planifier_rediger_corriger(
         planificateur, redacteur, relecteur, dossier, args.public, args.angle
     )
 
-    print("\n--- Etape 6 : export ---")
+    titre("Etape 6 : export")
     sortie, archive = exporter(args.sortie, dossier, plan, article, statut, valide, historique)
 
     if args.copier_vers:
@@ -64,7 +66,7 @@ async def executer(args):
         shutil.copy2(archive, destination / archive.name)
         print("Archive egalement copiee dans :", destination)
 
-    print("\nTermine. Dossier :", sortie, "| Archive :", archive)
+    resume_final(statut, corrections, sortie, archive)
 
 
 def main():

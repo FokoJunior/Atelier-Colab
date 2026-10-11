@@ -9,6 +9,7 @@ from atelier.agents.redacteur import creer_redacteur
 from atelier.agents.relecteur import creer_relecteur
 from atelier.agents.runner import appeler_agent
 from atelier.config import MAX_VERSIONS
+from atelier.console import formater_markdown, titre
 
 
 def construire_agents(modele):
@@ -19,14 +20,15 @@ async def planifier_rediger_corriger(planificateur, redacteur, relecteur, dossie
     preuves_agents = {k: v for k, v in dossier.items() if k != "suggestions_html"}
     contexte = json.dumps({"public": public, "angle": angle, "dossier": preuves_agents}, ensure_ascii=False)
     plan = await appeler_agent(planificateur, contexte)
-    print("\n--- Plan ---\n" + plan)
+    titre("Plan genere")
+    print(formater_markdown(plan))
 
     historique = []
     corrections = []
     valide = False
     article = ""
     for numero in range(1, MAX_VERSIONS + 1):
-        print(f"Redaction et controle : version {numero}/{MAX_VERSIONS}")
+        titre(f"Redaction et controle : version {numero}/{MAX_VERSIONS}")
         demande = json.dumps(
             {
                 "contexte": preuves_agents,
@@ -52,7 +54,4 @@ async def planifier_rediger_corriger(planificateur, redacteur, relecteur, dossie
         if valide:
             break
     statut = "CONTROLES_AUTOMATIQUES_PASSES" if valide else "BROUILLON_A_REVOIR"
-    print("Statut :", statut)
-    if corrections:
-        print("Corrections restant a traiter :", corrections)
     return plan, article, statut, valide, corrections, historique
